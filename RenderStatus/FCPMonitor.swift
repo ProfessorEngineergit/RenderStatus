@@ -35,6 +35,24 @@ class FCPMonitor: ObservableObject {
     /// Previous rendering state for detecting completion
     private var wasRendering: Bool = false
     
+    /// Flag to prevent overlapping status checks
+    private var isCheckingStatus: Bool = false
+    
+    /// Pre-compiled regex for percentage pattern
+    private static let percentageRegex: NSRegularExpression? = {
+        try? NSRegularExpression(pattern: #"(\d+(?:\.\d+)?)\s*%"#)
+    }()
+    
+    /// Pre-compiled regex patterns for time remaining
+    private static let timeRemainingRegexes: [NSRegularExpression] = {
+        let patterns = [
+            #"(\d+:\d+(?::\d+)?)\s*(?:remaining|left)"#,
+            #"(\d+h?\s*\d*m?\s*\d*s?)\s*(?:remaining|left)"#,
+            #"about\s+(\d+\s*(?:minutes?|mins?|hours?|hrs?|seconds?|secs?))"#
+        ]
+        return patterns.compactMap { try? NSRegularExpression(pattern: $0, options: .caseInsensitive) }
+    }()
+    
     init() {
         startMonitoring()
         requestNotificationPermission()
@@ -54,7 +72,8 @@ class FCPMonitor: ObservableObject {
         // Set up periodic timer
         timer = Timer.scheduledTimer(withTimeInterval: updateInterval, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
-                self?.checkFCPStatus()
+                guard let self = self, !self.isCheckingStatus else { return }
+                self.checkFCPStatus()
             }
         }
     }
@@ -67,6 +86,9 @@ class FCPMonitor: ObservableObject {
     
     /// Check the current status of Final Cut Pro
     func checkFCPStatus() {
+        isCheckingStatus = true
+        defer { isCheckingStatus = false }
+        
         // Check if Final Cut Pro is running
         guard isFCPRunning() else {
             fcpStatus = .notRunning
@@ -164,35 +186,28 @@ class FCPMonitor: ObservableObject {
     
     /// Parse progress percentage from a string
     private func parseProgressFromString(_ string: String) -> (progress: Double?, timeRemaining: String?) {
-        // Look for percentage pattern (e.g., "45%", "Rendering 45%", etc.)
-        let percentagePattern = #"(\d+(?:\.\d+)?)\s*%"#
-        
-        if let regex = try? NSRegularExpression(pattern: percentagePattern),
-           let match = regex.firstMatch(in: string, range: NSRange(string.startIndex..., in: string)),
-           let range = Range(match.range(at: 1), in: string) {
-            let percentString = String(string[range])
-            if let percent = Double(percentString) {
-                // Try to find time remaining
-                let timeRemaining = parseTimeRemaining(from: string)
-                return (percent, timeRemaining)
-            }
+        // Use pre-compiled regex for percentage pattern
+        guard let regex = Self.percentageRegex,
+              let match = regex.firstMatch(in: string, range: NSRange(string.startIndex..., in: string)),
+              let range = Range(match.range(at: 1), in: string) else {
+            return (nil, nil)
         }
         
-        return (nil, nil)
+        let percentString = String(string[range])
+        guard let percent = Double(percentString) else {
+            return (nil, nil)
+        }
+        
+        // Try to find time remaining
+        let timeRemaining = parseTimeRemaining(from: string)
+        return (percent, timeRemaining)
     }
     
     /// Parse time remaining from a string
     private func parseTimeRemaining(from string: String) -> String? {
-        // Look for time patterns like "2:30 remaining", "1h 30m", etc.
-        let timePatterns = [
-            #"(\d+:\d+(?::\d+)?)\s*(?:remaining|left)"#,
-            #"(\d+h?\s*\d*m?\s*\d*s?)\s*(?:remaining|left)"#,
-            #"about\s+(\d+\s*(?:minutes?|mins?|hours?|hrs?|seconds?|secs?))"#
-        ]
-        
-        for pattern in timePatterns {
-            if let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
-               let match = regex.firstMatch(in: string, range: NSRange(string.startIndex..., in: string)),
+        // Use pre-compiled regex patterns for time remaining
+        for regex in Self.timeRemainingRegexes {
+            if let match = regex.firstMatch(in: string, range: NSRange(string.startIndex..., in: string)),
                let range = Range(match.range(at: 1), in: string) {
                 return String(string[range])
             }
