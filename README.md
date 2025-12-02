@@ -110,12 +110,84 @@ RenderStatus/
 
 ## How It Works
 
-RenderStatus uses AppleScript to communicate with Final Cut Pro through macOS's Apple Events system. It:
+RenderStatus uses AppleScript to communicate with Final Cut Pro through macOS's Apple Events system. The app employs a multi-layered detection strategy to reliably capture render progress information.
 
-1. Checks if Final Cut Pro is running
-2. Queries window titles and UI elements for render progress information
-3. Parses progress percentages from the returned data
-4. Updates the menubar display every 2 seconds
+### Detection Overview
+
+The app continuously monitors Final Cut Pro using a timer-based polling mechanism that runs every 2 seconds. Each polling cycle performs the following steps:
+
+1. **Check if Final Cut Pro is running**: Uses `NSWorkspace` to check if the app with bundle ID `com.apple.FinalCut` is active
+2. **Query for render progress**: Executes multiple AppleScript-based detection methods
+3. **Parse progress data**: Extracts percentage values using regex pattern matching
+4. **Update the UI**: Refreshes the menubar display with the current progress
+
+### Detection Methods
+
+RenderStatus uses three fallback methods to detect render progress, trying each in sequence until one succeeds:
+
+#### 1. Primary Method: Window Names & Background Tasks
+
+The primary detection method uses AppleScript via the System Events application to:
+
+- **Scan all window names**: Iterates through all Final Cut Pro windows looking for percentage values in window titles (e.g., "Rendering - 45%")
+- **Check Background Tasks window**: Specifically queries the "Background Tasks" window which Final Cut Pro opens during rendering:
+  - Examines the `value` and `description` properties of all UI elements
+  - Looks for strings containing the "%" character
+
+```applescript
+tell application "System Events"
+    tell process "Final Cut Pro"
+        set windowList to name of every window
+        repeat with windowName in windowList
+            if windowName contains "%" then
+                return windowName as text
+            end if
+        end repeat
+    end tell
+end tell
+```
+
+*Note: This is a simplified example. The actual implementation includes additional error handling and checks for the Background Tasks window.*
+
+#### 2. Alternative Method: Progress Indicators & Menus
+
+If the primary method doesn't find progress information, this method:
+
+- **Queries progress indicator elements**: Searches for native `AXProgressIndicator` elements in all windows and reads their `value` property (0.0-1.0 range)
+- **Checks Window and View menus**: Scans menu items in the menubar for percentage strings that might indicate render status
+
+#### 3. UI Elements Method: Static Text & Deep Scanning
+
+As a final fallback, this method performs a deeper scan:
+
+- **Static text elements**: Checks the `value` property of all static text UI elements in every window
+- **Group elements**: Recursively searches within group containers for static text elements
+- **Progress indicators via role**: Uses the Accessibility API to find elements with `role = "AXProgressIndicator"` and reads their values
+
+### Progress Parsing
+
+Once text containing progress information is found, it's parsed using pre-compiled regular expressions:
+
+- **Percentage pattern**: `(\d+(?:\.\d+)?)\s*%` - Matches numbers followed by a percent sign (e.g., "45%", "67.5%")
+- **Time remaining patterns**: Multiple patterns to extract estimated completion time:
+  - `(\d+:\d+(?::\d+)?)\s*(?:remaining|left)` - Time in HH:MM:SS or MM:SS format (e.g., "1:30:00 remaining", "05:30 left")
+  - `(\d+h?\s*\d*m?\s*\d*s?)\s*(?:remaining|left)` - Natural time format (e.g., "2h 30m remaining", "45m left")
+  - `about\s+(\d+\s*(?:minutes?|mins?|hours?|hrs?|seconds?|secs?))` - Approximate time (e.g., "about 5 minutes")
+
+### Render Completion Detection
+
+The app tracks state changes to detect when a render completes:
+
+1. Maintains a `wasRendering` flag to track the previous state
+2. When transitioning from rendering → not rendering, triggers a completion notification
+3. Sends a macOS notification via `UNUserNotificationCenter` to alert the user
+
+### Performance Considerations
+
+- **Async execution**: AppleScript calls run on a background thread (`DispatchQueue.global`) to prevent UI blocking
+- **Overlapping prevention**: A flag prevents multiple simultaneous status checks
+- **Pre-compiled regex**: Regular expressions are compiled once at class initialization for efficiency
+- **Common run loop mode**: The timer is added to `.common` mode to continue updating even during menu interactions
 
 ## Troubleshooting
 
