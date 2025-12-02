@@ -156,7 +156,6 @@ struct MenuBarView: View {
                     RoundedRectangle(cornerRadius: 4)
                         .fill(progressGradient)
                         .frame(width: max(0, geometry.size.width * (fcpMonitor.progress / 100)), height: 8)
-                        .animation(.linear(duration: 0.3), value: fcpMonitor.progress)
                 }
             }
             .frame(height: 8)

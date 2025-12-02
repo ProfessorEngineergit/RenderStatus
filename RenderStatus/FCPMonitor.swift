@@ -119,7 +119,7 @@ class FCPMonitor: ObservableObject {
         }
         
         // Try to get render progress using async task to avoid blocking UI
-        Task { @MainActor in
+        Task {
             let renderInfo = await self.getRenderProgressAsync()
             self.updateStatus(with: renderInfo)
         }
@@ -250,10 +250,9 @@ class FCPMonitor: ObservableObject {
         if let scriptObject = NSAppleScript(source: script) {
             let result = scriptObject.executeAndReturnError(&error)
             
-            if let errorDict = error {
-                DispatchQueue.main.async { [weak self] in
-                    self?.lastError = "Primary detection error: \(errorDict)"
-                }
+            if error != nil {
+                // Error occurred but we'll try alternative methods
+                // Note: Can't set @Published property from background thread
             }
             
             if let resultString = result.stringValue, !resultString.isEmpty {

@@ -70,7 +70,6 @@ struct CircularProgressView: View {
                 .stroke(style: StrokeStyle(lineWidth: 2, lineCap: .round))
                 .foregroundColor(progressColor)
                 .rotationEffect(Angle(degrees: -90))
-                .animation(.linear(duration: 0.2), value: progress)
             
             // Center icon
             Image(systemName: "film.fill")
