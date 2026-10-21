@@ -1,10 +1,9 @@
 # RenderStatus
 
-A native macOS menubar application that displays render progress from Final Cut Pro in real-time.
+Experimental macOS menu-bar app that attempts to read Final Cut Pro render progress through AppleScript and UI inspection. Compatibility depends on Final Cut Pro, macOS and the permissions granted.
 
 ![macOS](https://img.shields.io/badge/macOS-13.0+-blue)
 ![Swift](https://img.shields.io/badge/Swift-5.9+-orange)
-![License](https://img.shields.io/badge/license-MIT-green)
 
 ## Features
 
@@ -143,10 +142,14 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+The original README states MIT; that declaration is retained. This branch has no `LICENSE` file, so the maintainer still needs to publish the full license text.
 
 ## Acknowledgments
 
 - Built with SwiftUI and modern macOS APIs
 - Uses native macOS MenuBarExtra for seamless integration
 - Inspired by the need to monitor long renders without constantly checking Final Cut Pro
+
+## Development and AI assistance
+
+Small learning or experimental project developed with AI assistance. The default-branch history includes contributions explicitly attributed to GitHub Copilot ([example](https://github.com/ProfessorEngineergit/RenderStatus/commit/c478f68a4967b51a3dd8705f5b93239917c448b1)). This documents AI involvement in those contributions; it does not establish the origin of every line or independent validation. Existing author, co-author and session records are retained.
