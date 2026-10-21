@@ -150,6 +150,6 @@ The original README states MIT; that declaration is retained. This branch has no
 - Uses native macOS MenuBarExtra for seamless integration
 - Inspired by the need to monitor long renders without constantly checking Final Cut Pro
 
-## Development and AI assistance
+## AI assistance
 
-Small learning or experimental project developed with AI assistance. The default-branch history includes contributions explicitly attributed to GitHub Copilot ([example](https://github.com/ProfessorEngineergit/RenderStatus/commit/c478f68a4967b51a3dd8705f5b93239917c448b1)). This documents AI involvement in those contributions; it does not establish the origin of every line or independent validation. Existing author, co-author and session records are retained.
+Some code contributions are explicitly attributed to AI tools: [GitHub Copilot](https://github.com/ProfessorEngineergit/RenderStatus/commit/8d2e8e84823fbf3abe2a5deea1924dc6526dbdd8). This applies to those contributions, not every file.
